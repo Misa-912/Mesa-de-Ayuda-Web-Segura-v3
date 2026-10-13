@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Mesa de ayuda académica con TypeScript, Vite, Supabase y PostgreSQL" />
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' %SUPABASE_ORIGINS%; object-src 'none'; base-uri 'self'; form-action 'self'%UPGRADE_INSECURE%" />
+  <title>Mesa de Ayuda | HelpDesk EDU</title>
+  <script type="module" src="/src/main.ts"></script>
+</head>
+<body>
+  <div id="toast" class="toast" aria-live="polite"></div>
+  <div id="configError" class="config-error hidden" role="alert"></div>
+
+  <main class="shell">
+    <section id="authView" class="auth-layout">
+      <div class="hero-panel">
+        <span class="eyebrow">PROYECTO ACADÉMICO</span>
+        <h1>HelpDesk EDU</h1>
+        <p>Mesa de ayuda web con TypeScript y PostgreSQL, protegida con autenticación y políticas de acceso por fila.</p>
+        <div class="feature-grid">
+          <div><strong>TS</strong><span>TypeScript</span></div>
+          <div><strong>SQL</strong><span>PostgreSQL</span></div>
+          <div><strong>RLS</strong><span>Seguridad</span></div>
+        </div>
+      </div>
+
+      <div class="auth-card">
+        <div class="brand-mark">HD</div>
+        <h2>Bienvenido</h2>
+        <p class="muted">Inicie sesión o cree una cuenta para continuar.</p>
+        <div class="tabs">
+          <button id="loginTab" class="tab active" type="button">Iniciar sesión</button>
+          <button id="registerTab" class="tab" type="button">Registrarse</button>
+        </div>
+        <form id="loginForm" class="form-stack" autocomplete="on">
+          <label>Correo electrónico
+            <input id="loginEmail" type="email" required maxlength="254" autocomplete="email" placeholder="usuario@correo.com" />
+          </label>
+          <label>Contraseña
+            <input id="loginPassword" type="password" required minlength="8" maxlength="72" autocomplete="current-password" placeholder="Mínimo 8 caracteres" />
+          </label>
+          <button class="btn primary" type="submit">Ingresar</button>
+        </form>
+        <form id="registerForm" class="form-stack hidden" autocomplete="on">
+          <label>Nombre completo
+            <input id="registerName" type="text" required minlength="3" maxlength="100" autocomplete="name" placeholder="Nombre Apellido" />
+          </label>
+          <label>Correo electrónico
+            <input id="registerEmail" type="email" required maxlength="254" autocomplete="email" placeholder="usuario@correo.com" />
+          </label>
+          <label>Contraseña
+            <input id="registerPassword" type="password" required minlength="8" maxlength="72" autocomplete="new-password" placeholder="Mínimo 8 caracteres" />
+          </label>
+          <button class="btn primary" type="submit">Crear cuenta</button>
+        </form>
+      </div>
+    </section>
+
+    <section id="appView" class="hidden">
+      <header class="topbar">
+        <div><p class="eyebrow">MESA DE AYUDA</p><h1>Panel de tickets</h1></div>
+        <div class="user-area">
+          <div class="user-meta"><strong id="currentUserName">Usuario</strong><span id="currentUserRole">usuario</span></div>
+          <button id="logoutBtn" class="btn secondary" type="button">Salir</button>
+        </div>
+      </header>
+      <section class="stats-grid">
+        <article class="stat-card"><span>Total</span><strong id="statTotal">0</strong></article>
+        <article class="stat-card"><span>Abiertos</span><strong id="statOpen">0</strong></article>
+        <article class="stat-card"><span>En proceso</span><strong id="statProgress">0</strong></article>
+        <article class="stat-card"><span>Resueltos</span><strong id="statResolved">0</strong></article>
+      </section>
+      <section class="content-grid">
+        <article class="panel">
+          <div class="panel-heading"><div><p class="eyebrow">NUEVO REGISTRO</p><h2>Crear ticket</h2></div></div>
+          <form id="ticketForm" class="form-stack">
+            <label>Asunto
+              <input id="ticketTitle" type="text" required minlength="5" maxlength="150" placeholder="Ej. No puedo ingresar al sistema" />
+            </label>
+            <div class="two-columns">
+              <label>Categoría
+                <select id="ticketCategory" required></select>
+              </label>
+              <label>Prioridad
+                <select id="ticketPriority" required></select>
+              </label>
+            </div>
+            <label>Descripción
+              <textarea id="ticketDescription" rows="5" required minlength="10" maxlength="1500" placeholder="Describa el problema con suficiente detalle..."></textarea>
+            </label>
+            <button class="btn primary" type="submit">Registrar ticket</button>
+          </form>
+        </article>
+        <article class="panel tickets-panel">
+          <div class="panel-heading tickets-heading">
+            <div><p class="eyebrow">SEGUIMIENTO</p><h2 id="ticketListTitle">Mis tickets</h2></div>
+            <div class="filters">
+              <select id="statusFilter" aria-label="Filtrar por estado"></select>
+              <button id="refreshBtn" class="btn secondary" type="button">Actualizar</button>
+            </div>
+          </div>
+          <div id="ticketList" class="ticket-list"></div>
+        </article>
+      </section>
+      <section id="auditPanel" class="panel audit-panel hidden">
+        <div class="panel-heading tickets-heading">
+          <div><p class="eyebrow">SOLO ADMINISTRADOR</p><h2>Auditoría reciente</h2></div>
+          <button id="refreshAuditBtn" class="btn secondary" type="button">Actualizar</button>
+        </div>
+        <div id="auditList" class="audit-list"></div>
+      </section>
+    </section>
+  </main>
+</body>
+</html>
