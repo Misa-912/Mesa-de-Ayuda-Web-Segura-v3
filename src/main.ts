@@ -282,7 +282,12 @@ async function loadAudit(): Promise<void> {
   if (!logs.length) { listEl.replaceChildren(makeEmpty('Sin cambios registrados todavía.')); return; }
   listEl.replaceChildren(...logs.map(log => {
     const row = document.createElement('div'); row.className = 'audit-row';
-    const what = log.action === 'ASSIGN' ? 'asignó técnico' : `${log.old_status ?? '-'} → ${log.new_status ?? '-'}`;
+    const what = log.action === 'CREATE'
+    ? `creó el ticket · estado inicial: ${log.new_status ?? 'abierto'}`
+    : log.action === 'ASSIGN'
+      ? 'asignó técnico'
+      : `${log.old_status ?? '-'} → ${log.new_status ?? '-'}`;
+
     row.textContent = `#${log.ticket_id} · ${what} · ${log.actor?.full_name ?? 'sistema'} · ${new Date(log.created_at).toLocaleString('es-HN')}`;
     return row;
   }));

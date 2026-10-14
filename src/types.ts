@@ -57,7 +57,7 @@ export interface Ticket {
 export interface AuditLog {
   id: number;
   ticket_id: number;
-  action: 'STATUS_CHANGE' | 'ASSIGN';
+action: 'STATUS_CHANGE' | 'ASSIGN' | 'CREATE';
   old_status: TicketStatus | null;
   new_status: TicketStatus | null;
   created_at: string;
