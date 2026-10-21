@@ -58,59 +58,121 @@
       </div>
     </section>
 
-    <section id="appView" class="hidden">
-      <header class="topbar">
-        <div><p class="eyebrow">MESA DE AYUDA</p><h1>Panel de tickets</h1></div>
-        <div class="user-area">
-          <div class="user-meta"><strong id="currentUserName">Usuario</strong><span id="currentUserRole">usuario</span></div>
-          <button id="logoutBtn" class="btn secondary" type="button">Salir</button>
-        </div>
-      </header>
-      <section class="stats-grid">
-        <article class="stat-card"><span>Total</span><strong id="statTotal">0</strong></article>
-        <article class="stat-card"><span>Abiertos</span><strong id="statOpen">0</strong></article>
-        <article class="stat-card"><span>En proceso</span><strong id="statProgress">0</strong></article>
-        <article class="stat-card"><span>Resueltos</span><strong id="statResolved">0</strong></article>
-      </section>
-      <section class="content-grid">
-        <article class="panel">
-          <div class="panel-heading"><div><p class="eyebrow">NUEVO REGISTRO</p><h2>Crear ticket</h2></div></div>
-          <form id="ticketForm" class="form-stack">
-            <label>Asunto
-              <input id="ticketTitle" type="text" required minlength="5" maxlength="150" placeholder="Ej. No puedo ingresar al sistema" />
-            </label>
-            <div class="two-columns">
-              <label>Categoría
-                <select id="ticketCategory" required></select>
-              </label>
-              <label>Prioridad
-                <select id="ticketPriority" required></select>
-              </label>
-            </div>
-            <label>Descripción
-              <textarea id="ticketDescription" rows="5" required minlength="10" maxlength="1500" placeholder="Describa el problema con suficiente detalle..."></textarea>
-            </label>
-            <button class="btn primary" type="submit">Registrar ticket</button>
-          </form>
-        </article>
-        <article class="panel tickets-panel">
-          <div class="panel-heading tickets-heading">
-            <div><p class="eyebrow">SEGUIMIENTO</p><h2 id="ticketListTitle">Mis tickets</h2></div>
-            <div class="filters">
-              <select id="statusFilter" aria-label="Filtrar por estado"></select>
-              <button id="refreshBtn" class="btn secondary" type="button">Actualizar</button>
-            </div>
+    <section id="appView" class="app-layout hidden">
+      <aside class="sidebar" aria-label="Navegación principal">
+        <a class="side-brand" href="#dashboardTop" aria-label="HelpDesk EDU, inicio">
+          <span class="side-brand-mark">✦</span>
+          <span class="side-brand-copy"><strong>HelpDesk EDU</strong><small>Mesa de Ayuda</small></span>
+        </a>
+
+        <nav class="side-nav">
+          <a class="nav-item active" href="#dashboardTop"><span class="nav-icon">⌂</span><span>Panel de tickets</span></a>
+          <a class="nav-item" href="#ticketList"><span class="nav-icon">▤</span><span>Mis tickets</span></a>
+          <a class="nav-item" href="#ticketForm"><span class="nav-icon">＋</span><span>Crear ticket</span></a>
+          <a class="nav-item admin-nav hidden" id="auditNav" href="#auditPanel"><span class="nav-icon">⬡</span><span>Auditoría</span></a>
+          <a class="nav-item" href="#profileCard"><span class="nav-icon">♙</span><span>Perfil</span></a>
+          <!-- Opción de administración de usuarios justo abajo de Perfil -->
+          <a class="nav-item admin-nav hidden" id="navAdminUsers" href="#adminUsersPanel"><span class="nav-icon">👥</span><span>Usuarios y Roles</span></a>
+        </nav>
+
+        <div class="sidebar-bottom">
+          <button id="logoutBtn" class="nav-item logout-link" type="button"><span class="nav-icon">⇥</span><span>Cerrar sesión</span></button>
+          <div class="support-note">
+            <span class="support-shield">✧</span>
+            <span><strong>Soporte Técnico</strong><small>Siempre aquí para ayudarte</small></span>
           </div>
-          <div id="ticketList" class="ticket-list"></div>
-        </article>
-      </section>
-      <section id="auditPanel" class="panel audit-panel hidden">
-        <div class="panel-heading tickets-heading">
-          <div><p class="eyebrow">SOLO ADMINISTRADOR</p><h2>Auditoría reciente</h2></div>
-          <button id="refreshAuditBtn" class="btn secondary" type="button">Actualizar</button>
         </div>
-        <div id="auditList" class="audit-list"></div>
-      </section>
+      </aside>
+
+      <div class="dashboard-main">
+        <header id="dashboardTop" class="topbar">
+          <div class="topbar-heading">
+            <p class="eyebrow"><span class="eyebrow-line"></span> MESA DE AYUDA</p>
+            <h1>› Panel de tickets</h1>
+            <p class="topbar-subtitle">Gestiona y da seguimiento a los tickets de soporte técnico</p>
+          </div>
+          <div id="profileCard" class="user-card">
+            <span class="user-avatar">♙</span>
+            <span class="user-meta"><strong id="currentUserName">Usuario</strong><span id="currentUserRole">usuario</span></span>
+          </div>
+        </header>
+
+        <section class="stats-grid" aria-label="Estadísticas de tickets">
+          <article class="stat-card stat-total"><span class="stat-icon">▤</span><div class="stat-copy"><span class="stat-label">TOTAL</span><strong id="statTotal">0</strong><span class="stat-meter"></span></div></article>
+          <article class="stat-card stat-open"><span class="stat-icon">◷</span><div class="stat-copy"><span class="stat-label">ABIERTOS</span><strong id="statOpen">0</strong><span class="stat-meter"></span></div></article>
+          <article class="stat-card stat-progress"><span class="stat-icon">⚙</span><div class="stat-copy"><span class="stat-label">EN PROCESO</span><strong id="statProgress">0</strong><span class="stat-meter"></span></div></article>
+          <article class="stat-card stat-resolved"><span class="stat-icon">✓</span><div class="stat-copy"><span class="stat-label">RESUELTOS</span><strong id="statResolved">0</strong><span class="stat-meter"></span></div></article>
+        </section>
+
+        <section class="content-grid">
+          <article class="panel create-panel">
+            <div class="panel-heading create-heading">
+              <span class="panel-icon">＋</span>
+              <div><h2>Crear ticket</h2><p>Completa la información para crear un nuevo ticket</p></div>
+            </div>
+            <form id="ticketForm" class="form-stack">
+              <label>Asunto
+                <input id="ticketTitle" type="text" required minlength="5" maxlength="150" placeholder="Ej. No puedo ingresar al sistema" />
+              </label>
+              <div class="two-columns">
+                <label>Categoría
+                  <select id="ticketCategory" required></select>
+                </label>
+                <label>Prioridad
+                  <select id="ticketPriority" required></select>
+                </label>
+              </div>
+              <label>Descripción
+                <textarea id="ticketDescription" rows="5" required minlength="10" maxlength="1500" placeholder="Describe el problema con suficiente detalle..."></textarea>
+              </label>
+              <button class="btn primary" type="submit"><span class="button-symbol">➤</span> Crear ticket</button>
+            </form>
+          </article>
+
+          <article class="panel tickets-panel">
+            <div class="panel-heading tickets-heading">
+              <span class="panel-icon tickets-icon">▣</span>
+              <div class="tickets-heading-copy"><h2 id="ticketListTitle">Mis tickets</h2><p>Aquí puedes ver el estado de tus tickets y su progreso</p></div>
+              <div class="filters">
+                <select id="statusFilter" aria-label="Filtrar por estado"></select>
+                <button id="refreshBtn" class="btn secondary" type="button"><span class="button-symbol">⟳</span> Actualizar</button>
+              </div>
+            </div>
+            <div id="ticketList" class="ticket-list"></div>
+          </article>
+        </section>
+
+        <!-- Panel de Administración de Usuarios integrado limpiamente con las mismas clases del sistema -->
+        <section id="adminUsersPanel" class="panel audit-panel hidden">
+          <div class="panel-heading tickets-heading">
+            <span class="panel-icon audit-icon">👥</span>
+            <div class="tickets-heading-copy"><p class="eyebrow">SOLO ADMINISTRADOR</p><h2>Gestión de Usuarios y Roles</h2><p>Administra las cuentas y cambia los roles de usuario, técnico o administrador</p></div>
+            <button id="refreshUsersBtn" class="btn secondary" type="button"><span class="button-symbol">⟳</span> Actualizar</button>
+          </div>
+          <div class="table-responsive" style="overflow-x: auto; margin-top: 16px;">
+            <table class="users-table" style="width: 100%; border-collapse: collapse; text-align: left;">
+              <thead>
+                <tr style="border-bottom: 2px solid rgba(255, 255, 255, 0.1); font-size: 13px;">
+                  <th style="padding: 10px;">Nombre</th>
+                  <th style="padding: 10px;">Rol Actual</th>
+                  <th style="padding: 10px;">Cambiar Rol</th>
+                </tr>
+              </thead>
+              <tbody id="adminUsersTableBody">
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="auditPanel" class="panel audit-panel hidden">
+          <div class="panel-heading tickets-heading">
+            <span class="panel-icon audit-icon">⬡</span>
+            <div class="tickets-heading-copy"><p class="eyebrow">SOLO ADMINISTRADOR</p><h2>Auditoría reciente</h2><p>Registro de acciones y cambios realizados en los tickets</p></div>
+            <button id="refreshAuditBtn" class="btn secondary" type="button"><span class="button-symbol">⟳</span> Actualizar</button>
+          </div>
+          <div id="auditList" class="audit-list"></div>
+        </section>
+      </div>
     </section>
   </main>
 </body>

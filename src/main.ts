@@ -2,7 +2,7 @@ import './styles.css';
 import { configError, supabase } from './supabase';
 import { friendlyError, validateEmail, validateName, validatePassword, validateTicket } from './validation';
 import { CATEGORIES, LIMITS, PRIORITIES, STATUS_FLOW, STATUSES } from './types';
-import type { AuditLog, Profile, Ticket, TicketStatus } from './types';
+import type { AuditLog, Profile, Ticket, TicketStatus, UserRole } from './types';
 import type { User } from '@supabase/supabase-js';
 
 function el<T extends HTMLElement>(id: string): T {
@@ -17,17 +17,17 @@ const toast = el<HTMLElement>('toast');
 let currentUser: User | null = null;
 let currentProfile: Profile | null = null;
 let ticketsCache: Ticket[] = [];
+let techniciansCache: Profile[] = [];
+let allUsersCache: Profile[] = [];
 let toastTimer: number | undefined;
 
 function notify(message: string, type: 'ok' | 'error' = 'ok'): void {
-  // textContent evita interpretar HTML recibido de errores o entradas del usuario.
   toast.textContent = message;
   toast.className = `toast show ${type === 'error' ? 'error' : ''}`;
   if (toastTimer) window.clearTimeout(toastTimer);
   toastTimer = window.setTimeout(() => { toast.className = 'toast'; }, 4500);
 }
 
-// Deshabilita el botón mientras se espera a Supabase para evitar envíos dobles.
 async function withBusy(form: HTMLFormElement, task: () => Promise<void>): Promise<void> {
   const button = form.querySelector<HTMLButtonElement>('button[type="submit"]');
   if (button) button.disabled = true;
@@ -37,21 +37,23 @@ async function withBusy(form: HTMLFormElement, task: () => Promise<void>): Promi
 function fillSelect(select: HTMLSelectElement, options: readonly { value: string; label: string }[], selected?: string): void {
   select.replaceChildren(...options.map(({ value, label }) => {
     const option = document.createElement('option');
-    option.value = value; option.textContent = label; option.selected = value === selected;
+    option.value = value;
+    option.textContent = label;
+    option.selected = value === selected;
     return option;
   }));
 }
 
-// Las opciones y límites del formulario salen de types.ts: así el HTML no puede
-// quedar distinto de la validación y de los CHECK de PostgreSQL.
 function setupForms(): void {
   fillSelect(el<HTMLSelectElement>('ticketCategory'), CATEGORIES);
   fillSelect(el<HTMLSelectElement>('ticketPriority'), PRIORITIES.map(p => ({ value: p, label: p })), 'Media');
   fillSelect(el<HTMLSelectElement>('statusFilter'), [{ value: 'todos', label: 'Todos' }, ...STATUSES.map(s => ({ value: s, label: s }))]);
   const title = el<HTMLInputElement>('ticketTitle');
-  title.minLength = LIMITS.titleMin; title.maxLength = LIMITS.titleMax;
+  title.minLength = LIMITS.titleMin;
+  title.maxLength = LIMITS.titleMax;
   const description = el<HTMLTextAreaElement>('ticketDescription');
-  description.minLength = LIMITS.descriptionMin; description.maxLength = LIMITS.descriptionMax;
+  description.minLength = LIMITS.descriptionMin;
+  description.maxLength = LIMITS.descriptionMax;
 }
 
 function setTab(tab: 'login' | 'register'): void {
@@ -65,9 +67,6 @@ function setTab(tab: 'login' | 'register'): void {
 el<HTMLButtonElement>('loginTab').addEventListener('click', () => setTab('login'));
 el<HTMLButtonElement>('registerTab').addEventListener('click', () => setTab('register'));
 
-// IMPORTANTE: el formulario se guarda en una constante ANTES del await.
-// Después de un await, event.currentTarget vale null y .reset() lanzaba
-// "Cannot read properties of null", mostrando un error aunque la operación sí se guardó.
 el<HTMLFormElement>('registerForm').addEventListener('submit', (event) => {
   event.preventDefault();
   const form = event.currentTarget as HTMLFormElement;
@@ -76,8 +75,11 @@ el<HTMLFormElement>('registerForm').addEventListener('submit', (event) => {
       const fullName = validateName(el<HTMLInputElement>('registerName').value);
       const email = validateEmail(el<HTMLInputElement>('registerEmail').value);
       const password = validatePassword(el<HTMLInputElement>('registerPassword').value);
-      // El perfil lo crea el trigger on_auth_user_created; el frontend NO inserta en profiles.
-      const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: fullName } } });
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { full_name: fullName } },
+      });
       if (error) throw error;
       form.reset();
       if (data.session) {
@@ -86,7 +88,9 @@ el<HTMLFormElement>('registerForm').addEventListener('submit', (event) => {
         notify('Cuenta creada. Revise su correo para confirmarla y luego inicie sesión.');
         setTab('login');
       }
-    } catch (error) { notify(friendlyError(error, 'Error al registrar.'), 'error'); }
+    } catch (error) {
+      notify(friendlyError(error, 'Error al registrar.'), 'error');
+    }
   });
 });
 
@@ -104,18 +108,53 @@ el<HTMLFormElement>('loginForm').addEventListener('submit', (event) => {
           : 'Credenciales no válidas o acceso rechazado.');
       }
       form.reset();
-      // La entrada a la aplicación la hace onAuthStateChange (evento SIGNED_IN).
-    } catch (error) { notify(friendlyError(error, 'No se pudo iniciar sesión.'), 'error'); }
+    } catch (error) {
+      notify(friendlyError(error, 'No se pudo iniciar sesión.'), 'error');
+    }
   });
 });
 
-el<HTMLButtonElement>('logoutBtn').addEventListener('click', async () => { await supabase.auth.signOut(); });
+el<HTMLButtonElement>('logoutBtn').addEventListener('click', async () => {
+  await supabase.auth.signOut();
+});
+
+const dashboardNavLinks = Array.from(
+  document.querySelectorAll<HTMLAnchorElement>(
+    '.side-nav a.nav-item[href^="#"]'
+  )
+);
+
+function syncActiveNav(): void {
+  const targetId = window.location.hash || '#dashboardTop';
+  const activeLink = dashboardNavLinks.find(
+    (link) => link.getAttribute('href') === targetId
+  ) ?? dashboardNavLinks.find(
+    (link) => link.getAttribute('href') === '#dashboardTop'
+  );
+
+  dashboardNavLinks.forEach((link) => {
+    link.classList.toggle('active', link === activeLink);
+  });
+}
+
+dashboardNavLinks.forEach((link) => {
+  link.addEventListener('click', () => {
+    dashboardNavLinks.forEach((item) => {
+      item.classList.remove('active');
+    });
+    link.classList.add('active');
+  });
+});
+
+window.addEventListener('hashchange', syncActiveNav);
+syncActiveNav();
 
 el<HTMLFormElement>('ticketForm').addEventListener('submit', (event) => {
   event.preventDefault();
   const form = event.currentTarget as HTMLFormElement;
   if (!currentUser) return;
   const userId = currentUser.id;
+
   void withBusy(form, async () => {
     try {
       const clean = validateTicket({
@@ -124,66 +163,259 @@ el<HTMLFormElement>('ticketForm').addEventListener('submit', (event) => {
         category: el<HTMLSelectElement>('ticketCategory').value,
         priority: el<HTMLSelectElement>('ticketPriority').value,
       });
-      const { error } = await supabase.from('tickets').insert({ user_id: userId, ...clean });
+
+      const { error } = await supabase
+        .from('tickets')
+        .insert({ user_id: userId, ...clean });
+
       if (error) throw error;
+
       form.reset();
       el<HTMLSelectElement>('ticketPriority').value = 'Media';
       notify('Ticket registrado correctamente.');
       await loadTickets();
-    } catch (error) { notify(friendlyError(error, 'No se pudo registrar el ticket.'), 'error'); }
+    } catch (error) {
+      notify(friendlyError(error, 'No se pudo registrar el ticket.'), 'error');
+    }
   });
 });
 
 el<HTMLSelectElement>('statusFilter').addEventListener('change', renderTickets);
 el<HTMLButtonElement>('refreshBtn').addEventListener('click', () => void loadTickets());
 el<HTMLButtonElement>('refreshAuditBtn').addEventListener('click', () => void loadAudit());
+document.getElementById('refreshUsersBtn')?.addEventListener('click', () => void loadUsersList());
 
 async function loadProfile(): Promise<void> {
   if (!currentUser) return;
-  const { data, error } = await supabase.from('profiles').select('id, full_name, role').eq('id', currentUser.id).maybeSingle();
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, full_name, role')
+    .eq('id', currentUser.id)
+    .maybeSingle();
+
   if (error) throw error;
+
   if (!data) {
-    // No se crea el perfil desde el navegador (no hay permiso, por seguridad).
-    // Si falta, el trigger no se ejecutó: hay que correr database.sql v3, que crea los perfiles faltantes.
     throw new Error('Su usuario no tiene perfil en public.profiles. El administrador debe ejecutar database.sql (v3).');
   }
+
   currentProfile = data as Profile;
-  el<HTMLElement>('currentUserName').textContent = currentProfile.full_name || currentUser.email || 'Usuario';
+
+  if (isAdmin()) {
+    try {
+      await loadTechnicians();
+      await loadUsersList();
+    } catch (error) {
+      techniciansCache = [];
+      allUsersCache = [];
+      notify(friendlyError(error, 'No se pudo cargar la información administrativa.'), 'error');
+    }
+  }
+
+  el<HTMLElement>('currentUserName').textContent =
+    currentProfile.full_name || currentUser.email || 'Usuario';
   el<HTMLElement>('currentUserRole').textContent = currentProfile.role;
-  el<HTMLElement>('ticketListTitle').textContent = isStaff() ? 'Todos los tickets' : 'Mis tickets';
+  el<HTMLElement>('ticketListTitle').textContent =
+    isStaff() ? 'Todos los tickets' : 'Mis tickets';
   el<HTMLElement>('auditPanel').classList.toggle('hidden', !isAdmin());
+
+  const navAdminUsers = document.getElementById('navAdminUsers');
+  if (navAdminUsers) {
+    navAdminUsers.classList.toggle('hidden', !isAdmin());
+  }
+
+  const userAdminPanel = document.getElementById('adminUsersPanel');
+  if (userAdminPanel) {
+    userAdminPanel.classList.toggle('hidden', !isAdmin());
+  }
 }
 
-function isStaff(): boolean { return currentProfile?.role === 'admin' || currentProfile?.role === 'tecnico'; }
-function isAdmin(): boolean { return currentProfile?.role === 'admin'; }
+function isStaff(): boolean {
+  return currentProfile?.role === 'admin' || currentProfile?.role === 'tecnico';
+}
+
+function isAdmin(): boolean {
+  return currentProfile?.role === 'admin';
+}
+
+async function loadTechnicians(): Promise<void> {
+  if (!isAdmin()) {
+    techniciansCache = [];
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, full_name, role')
+    .eq('role', 'tecnico')
+    .order('full_name', { ascending: true });
+
+  if (error) throw error;
+
+  techniciansCache = (data ?? []) as Profile[];
+}
+
+async function loadUsersList(): Promise<void> {
+  if (!isAdmin()) {
+    allUsersCache = [];
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, full_name, role')
+    .order('full_name', { ascending: true });
+
+  if (error) throw error;
+
+  allUsersCache = (data ?? []) as Profile[];
+  renderAdminUsersPanel();
+}
+
+function renderAdminUsersPanel(): void {
+  const tbody = document.getElementById('adminUsersTableBody');
+  if (!tbody) return;
+
+  tbody.replaceChildren();
+
+  if (!allUsersCache.length) {
+    const tr = document.createElement('tr');
+    const td = document.createElement('td');
+    td.colSpan = 3;
+    td.style.padding = '16px';
+    td.style.textAlign = 'center';
+    td.textContent = 'No hay usuarios registrados.';
+    tr.append(td);
+    tbody.append(tr);
+    return;
+  }
+
+  for (const userProfile of allUsersCache) {
+    const tr = document.createElement('tr');
+    tr.style.borderBottom = '1px solid rgba(255, 255, 255, 0.05)';
+
+    const tdName = document.createElement('td');
+    tdName.style.padding = '12px 10px';
+    tdName.textContent = userProfile.full_name?.trim() || 'Sin nombre';
+
+    const tdRole = document.createElement('td');
+    tdRole.style.padding = '12px 10px';
+    tdRole.textContent = userProfile.role;
+
+    const tdAction = document.createElement('td');
+    tdAction.style.padding = '12px 10px';
+
+    // Contenedor flex para alinear horizontalmente el selector y el botón
+    const actionContainer = document.createElement('div');
+    actionContainer.style.display = 'flex';
+    actionContainer.style.alignItems = 'center';
+    actionContainer.style.gap = '12px';
+
+    const selectRole = document.createElement('select');
+    selectRole.style.padding = '8px 12px';
+    selectRole.style.borderRadius = '6px';
+    selectRole.style.border = '1px solid rgba(255, 255, 255, 0.2)';
+    selectRole.style.background = 'rgba(15, 23, 42, 0.6)';
+    selectRole.style.color = '#fff';
+    
+    fillSelect(selectRole, [
+      { value: 'usuario', label: 'Usuario' },
+      { value: 'tecnico', label: 'Técnico' },
+      { value: 'admin', label: 'Administrador' },
+    ], userProfile.role);
+
+    const btnSaveRole = document.createElement('button');
+    btnSaveRole.type = 'button';
+    btnSaveRole.className = 'btn secondary';
+    btnSaveRole.style.padding = '8px 14px';
+    btnSaveRole.style.margin = '0';
+    btnSaveRole.textContent = 'Guardar';
+
+    btnSaveRole.addEventListener('click', async () => {
+      const newRole = selectRole.value as UserRole;
+      if (newRole === userProfile.role) {
+        notify('El usuario ya tiene ese rol.', 'error');
+        return;
+      }
+
+      btnSaveRole.disabled = true;
+      selectRole.disabled = true;
+
+      try {
+        await updateUserRole(userProfile.id, newRole);
+      } finally {
+        btnSaveRole.disabled = false;
+        selectRole.disabled = false;
+      }
+    });
+
+    actionContainer.append(selectRole, btnSaveRole);
+    tdAction.append(actionContainer);
+    tr.append(tdName, tdRole, tdAction);
+    tbody.append(tr);
+  }
+}
+
+async function updateUserRole(userId: string, newRole: UserRole): Promise<void> {
+  if (!isAdmin()) {
+    notify('Solo un administrador puede cambiar roles.', 'error');
+    return;
+  }
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ role: newRole })
+    .eq('id', userId);
+
+  if (error) {
+    notify(friendlyError(error, 'No se pudo actualizar el rol del usuario.'), 'error');
+    return;
+  }
+
+  notify('Rol actualizado correctamente.');
+  await loadUsersList();
+  await loadTechnicians();
+}
 
 async function loadTickets(): Promise<void> {
   if (!currentUser) return;
+
   const listEl = el<HTMLElement>('ticketList');
   listEl.replaceChildren(makeEmpty('Cargando tickets...'));
-  // Los nombres de propietario y técnico solo son visibles para staff (RLS de profiles).
+
   let query = supabase
     .from('tickets')
     .select('*, owner:profiles!tickets_user_id_fkey(full_name), technician:profiles!tickets_technician_id_fkey(full_name)')
     .order('created_at', { ascending: false });
-  if (!isStaff()) query = query.eq('user_id', currentUser.id);
+
+  if (!isStaff()) {
+    query = query.eq('user_id', currentUser.id);
+  }
+
   const { data, error } = await query;
+
   if (error) {
     listEl.replaceChildren(makeEmpty('No fue posible cargar los tickets.'));
     notify(friendlyError(error, 'No se pudieron cargar los tickets.'), 'error');
     return;
   }
+
   ticketsCache = (data ?? []) as Ticket[];
   updateStats();
   renderTickets();
+
   if (isAdmin()) await loadAudit();
 }
 
 function updateStats(): void {
   el<HTMLElement>('statTotal').textContent = String(ticketsCache.length);
-  el<HTMLElement>('statOpen').textContent = String(ticketsCache.filter(t => t.status === 'Abierto').length);
-  el<HTMLElement>('statProgress').textContent = String(ticketsCache.filter(t => t.status === 'En proceso').length);
-  el<HTMLElement>('statResolved').textContent = String(ticketsCache.filter(t => t.status === 'Resuelto' || t.status === 'Cerrado').length);
+  el<HTMLElement>('statOpen').textContent =
+    String(ticketsCache.filter(t => t.status === 'Abierto').length);
+  el<HTMLElement>('statProgress').textContent =
+    String(ticketsCache.filter(t => t.status === 'En proceso').length);
+  el<HTMLElement>('statResolved').textContent =
+    String(ticketsCache.filter(t => t.status === 'Resuelto' || t.status === 'Cerrado').length);
 }
 
 function makeEmpty(text: string): HTMLElement {
@@ -201,94 +433,474 @@ function makeBadge(text: string, className = ''): HTMLElement {
 }
 
 function statusClass(status: TicketStatus): string {
-  return { 'Abierto': 'open', 'En proceso': 'progress', 'Resuelto': 'resolved', 'Cerrado': 'closed' }[status];
+  return {
+    'Abierto': 'open',
+    'En proceso': 'progress',
+    'Resuelto': 'resolved',
+    'Cerrado': 'closed',
+  }[status];
 }
 
 function categoryLabel(value: string): string {
   return CATEGORIES.find(c => c.value === value)?.label ?? value;
 }
 
+function printSingleTicket(ticket: Ticket): void {
+  const win = window.open('', '_blank');
+  if (!win) return;
+
+  const createdDate = new Date(ticket.created_at).toLocaleString('es-HN');
+  const cat = categoryLabel(ticket.category);
+  const ownerName = ticket.owner?.full_name || currentProfile?.full_name || currentUser?.email || 'Usuario';
+  const techName = ticket.technician?.full_name || 'Sin asignar';
+
+  win.document.write(`
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+      <meta charset="UTF-8">
+      <title>Comprobante Ticket #${ticket.id} - HelpDesk EDU</title>
+      <style>
+        body {
+          font-family: system-ui, -apple-system, sans-serif;
+          padding: 40px;
+          color: #0f172a;
+          max-width: 700px;
+          margin: 0 auto;
+          background: #ffffff;
+        }
+        .header {
+          border-bottom: 3px solid #0284c7;
+          padding-bottom: 16px;
+          margin-bottom: 24px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        .brand {
+          font-size: 22px;
+          font-weight: 800;
+          color: #0284c7;
+        }
+        .ticket-number {
+          font-size: 18px;
+          font-weight: 700;
+          background: #f1f5f9;
+          padding: 6px 14px;
+          border-radius: 6px;
+          border: 1px solid #cbd5e1;
+        }
+        .section-title {
+          font-size: 12px;
+          font-weight: 800;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          color: #64748b;
+          margin-bottom: 6px;
+        }
+        .title {
+          font-size: 20px;
+          font-weight: 700;
+          margin-bottom: 20px;
+          color: #1e293b;
+        }
+        .grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 16px;
+          background: #f8fafc;
+          padding: 18px;
+          border-radius: 8px;
+          border: 1px solid #e2e8f0;
+          margin-bottom: 24px;
+        }
+        .item strong {
+          display: block;
+          font-size: 11px;
+          color: #64748b;
+          text-transform: uppercase;
+        }
+        .item span {
+          font-size: 14px;
+          font-weight: 600;
+          color: #0f172a;
+        }
+        .description-box {
+          background: #ffffff;
+          border: 1px solid #cbd5e1;
+          padding: 16px;
+          border-radius: 8px;
+          min-height: 120px;
+          font-size: 14px;
+          line-height: 1.6;
+          white-space: pre-wrap;
+          margin-bottom: 30px;
+        }
+        .footer {
+          border-top: 1px solid #e2e8f0;
+          padding-top: 16px;
+          font-size: 12px;
+          color: #94a3b8;
+          text-align: center;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <div class="brand">HelpDesk EDU</div>
+        <div class="ticket-number">TICKET #${ticket.id}</div>
+      </div>
+
+      <div class="section-title">ASUNTO DEL PROBLEMA</div>
+      <div class="title">${ticket.title}</div>
+
+      <div class="grid">
+        <div class="item"><strong>Estado</strong><span>${ticket.status}</span></div>
+        <div class="item"><strong>Prioridad</strong><span>${ticket.priority}</span></div>
+        <div class="item"><strong>Categoría</strong><span>${cat}</span></div>
+        <div class="item"><strong>Fecha de registro</strong><span>${createdDate}</span></div>
+        <div class="item"><strong>Usuario Solicitante</strong><span>${ownerName}</span></div>
+        <div class="item"><strong>Técnico Asignado</strong><span>${techName}</span></div>
+      </div>
+
+      <div class="section-title">DESCRIPCIÓN DEL PROBLEMA</div>
+      <div class="description-box">${ticket.description}</div>
+
+      <div class="footer">
+        Comprobante de atención generado por HelpDesk EDU el ${new Date().toLocaleString('es-HN')}
+      </div>
+    </body>
+    </html>
+  `);
+
+  win.document.close();
+  win.focus();
+
+  setTimeout(() => {
+    win.print();
+    win.close();
+  }, 300);
+}
+
 function renderTickets(): void {
   const filter = el<HTMLSelectElement>('statusFilter').value;
-  const tickets = filter === 'todos' ? ticketsCache : ticketsCache.filter(t => t.status === filter);
+  const tickets = filter === 'todos'
+    ? ticketsCache
+    : ticketsCache.filter(t => t.status === filter);
+
   const listEl = el<HTMLElement>('ticketList');
   listEl.replaceChildren();
-  if (!tickets.length) { listEl.append(makeEmpty('No hay tickets para mostrar.')); return; }
+
+  if (!tickets.length) {
+    listEl.append(makeEmpty('No hay tickets para mostrar.'));
+    return;
+  }
 
   for (const ticket of tickets) {
-    const article = document.createElement('article'); article.className = 'ticket';
-    const top = document.createElement('div'); top.className = 'ticket-top';
+    const article = document.createElement('article');
+    article.className = 'ticket';
+
+    const top = document.createElement('div');
+    top.className = 'ticket-top';
+
     const titleBox = document.createElement('div');
-    const eyebrow = document.createElement('span'); eyebrow.className = 'eyebrow'; eyebrow.textContent = `TICKET #${ticket.id}`;
-    const h3 = document.createElement('h3'); h3.textContent = ticket.title;
-    titleBox.append(eyebrow, h3); top.append(titleBox, makeBadge(ticket.status, statusClass(ticket.status)));
-    const p = document.createElement('p'); p.textContent = ticket.description;
-    const meta = document.createElement('div'); meta.className = 'ticket-meta';
+    const eyebrow = document.createElement('span');
+    eyebrow.className = 'eyebrow';
+    eyebrow.textContent = `TICKET #${ticket.id}`;
+
+    const h3 = document.createElement('h3');
+    h3.textContent = ticket.title;
+
+    titleBox.append(eyebrow, h3);
+    top.append(titleBox, makeBadge(ticket.status, statusClass(ticket.status)));
+
+    const p = document.createElement('p');
+    p.textContent = ticket.description;
+
+    const meta = document.createElement('div');
+    meta.className = 'ticket-meta';
     meta.append(
       makeBadge(categoryLabel(ticket.category)),
-      makeBadge(`Prioridad: ${ticket.priority}`, ticket.priority === 'Alta' ? 'high' : ticket.priority === 'Crítica' ? 'critical' : ''),
+      makeBadge(
+        `Prioridad: ${ticket.priority}`,
+        ticket.priority === 'Alta' ? 'high'
+          : ticket.priority === 'Crítica' ? 'critical' : ''
+      ),
       makeBadge(new Date(ticket.created_at).toLocaleString('es-HN')),
     );
-    if (isStaff() && ticket.owner?.full_name) meta.append(makeBadge(`Usuario: ${ticket.owner.full_name}`));
-    if (ticket.technician?.full_name) meta.append(makeBadge(`Técnico: ${ticket.technician.full_name}`));
+
+    if (isStaff() && ticket.owner?.full_name) {
+      meta.append(makeBadge(`Usuario: ${ticket.owner.full_name}`));
+    }
+
+    if (ticket.technician?.full_name) {
+      meta.append(makeBadge(`Técnico: ${ticket.technician.full_name}`));
+    }
+
     article.append(top, p, meta);
 
-    if (isStaff()) article.append(makeStaffActions(ticket));
+    const actionsWrapper = document.createElement('div');
+    actionsWrapper.className = 'staff-actions';
+
+    if (isAdmin() || ticket.technician_id === currentUser?.id) {
+      actionsWrapper.append(makeStaffActionsContent(ticket));
+    } else if (isStaff()) {
+      actionsWrapper.append(makeBadge(
+        ticket.technician_id
+          ? 'Solo el técnico asignado puede cambiar el estado.'
+          : 'Ticket pendiente de asignación.'
+      ));
+    }
+
+    const printBtn = document.createElement('button');
+    printBtn.type = 'button';
+    printBtn.className = 'btn-print-pdf';
+    printBtn.textContent = 'Imprimir PDF';
+    printBtn.addEventListener('click', () => printSingleTicket(ticket));
+
+    actionsWrapper.append(printBtn);
+    article.append(actionsWrapper);
     listEl.append(article);
   }
 }
 
-function makeStaffActions(ticket: Ticket): HTMLElement {
-  const actions = document.createElement('div'); actions.className = 'staff-actions';
-  // El técnico solo ve los cambios permitidos por el flujo; el admin ve todos.
-  // La regla real está en PostgreSQL (enforce_ticket_update), esto solo ayuda al usuario.
-  const next = isAdmin() ? STATUSES.filter(s => s !== ticket.status) : STATUS_FLOW[ticket.status];
+function makeStaffActionsContent(ticket: Ticket): HTMLElement {
+  const container = document.createElement('div');
+  container.className = 'ticket-action-controls';
+
+  const statusGroup = document.createElement('div');
+  statusGroup.className = 'status-actions';
+
+  const next = isAdmin()
+    ? STATUSES.filter(s => s !== ticket.status)
+    : STATUS_FLOW[ticket.status];
+
   if (!next.length) {
-    actions.append(makeBadge('Ticket cerrado: solo un administrador puede reabrirlo.'));
-    return actions;
+    statusGroup.append(
+      makeBadge('Ticket cerrado: solo un administrador puede reabrirlo.')
+    );
+  } else {
+    const select = document.createElement('select');
+    select.setAttribute(
+      'aria-label',
+      `Cambiar estado del ticket ${ticket.id}`
+    );
+    fillSelect(select, next.map(s => ({ value: s, label: s })));
+
+    const button = document.createElement('button');
+    button.className = 'btn secondary';
+    button.type = 'button';
+    button.textContent = 'Guardar estado';
+
+    button.addEventListener('click', async () => {
+      button.disabled = true;
+      select.disabled = true;
+
+      try {
+        await updateTicketStatus(
+          ticket.id,
+          select.value as TicketStatus
+        );
+      } finally {
+        button.disabled = false;
+        select.disabled = false;
+      }
+    });
+
+    statusGroup.append(select, button);
   }
-  const select = document.createElement('select');
-  select.setAttribute('aria-label', `Cambiar estado del ticket ${ticket.id}`);
-  fillSelect(select, next.map(s => ({ value: s, label: s })));
-  const button = document.createElement('button'); button.className = 'btn secondary'; button.type = 'button'; button.textContent = 'Guardar estado';
-  button.addEventListener('click', async () => {
-    button.disabled = true;
-    await updateTicketStatus(ticket.id, select.value as TicketStatus);
-    button.disabled = false;
-  });
-  actions.append(select, button);
-  return actions;
+
+  container.append(statusGroup);
+
+  if (isAdmin()) {
+    container.append(makeReassignmentControls(ticket));
+  }
+
+  return container;
 }
 
-async function updateTicketStatus(ticketId: number, newStatus: TicketStatus): Promise<void> {
-  if (!isStaff()) { notify('No tiene permisos para modificar estados.', 'error'); return; }
-  const { data, error } = await supabase.from('tickets').update({ status: newStatus }).eq('id', ticketId).select('id');
-  if (error) { notify(friendlyError(error, 'No se pudo actualizar el ticket.'), 'error'); return; }
-  // Con RLS, una actualización bloqueada no da error: simplemente afecta 0 filas.
-  if (!data?.length) { notify('La base de datos no permitió el cambio (RLS). Verifique su rol.', 'error'); return; }
+function makeReassignmentControls(ticket: Ticket): HTMLElement {
+  const group = document.createElement('div');
+  group.className = 'reassign-actions';
+
+  const label = document.createElement('label');
+  label.className = 'reassign-label';
+  label.textContent = 'Reasignar técnico';
+
+  const select = document.createElement('select');
+  select.setAttribute(
+    'aria-label',
+    `Reasignar técnico del ticket ${ticket.id}`
+  );
+
+  fillSelect(select, [
+    { value: '', label: 'Seleccionar técnico…' },
+    ...techniciansCache.map(technician => ({
+      value: technician.id,
+      label: technician.full_name?.trim() || 'Técnico sin nombre',
+    })),
+  ], ticket.technician_id ?? '');
+
+  label.append(select);
+
+  const button = document.createElement('button');
+  button.className = 'btn secondary btn-reassign';
+  button.type = 'button';
+  button.textContent = 'Reasignar';
+  button.disabled = techniciansCache.length === 0;
+
+  button.addEventListener('click', async () => {
+    const technicianId = select.value;
+
+    if (!technicianId) {
+      notify('Selecciona un técnico para reasignar el ticket.', 'error');
+      return;
+    }
+
+    if (technicianId === ticket.technician_id) {
+      notify('Ese técnico ya está asignado a este ticket.', 'error');
+      return;
+    }
+
+    button.disabled = true;
+    select.disabled = true;
+
+    try {
+      await reassignTicket(ticket.id, technicianId);
+    } finally {
+      button.disabled = false;
+      select.disabled = false;
+    }
+  });
+
+  if (!techniciansCache.length) {
+    const hint = document.createElement('span');
+    hint.className = 'reassign-hint';
+    hint.textContent = 'No hay técnicos disponibles para asignar.';
+    group.append(label, hint);
+  } else {
+    group.append(label, button);
+  }
+
+  return group;
+}
+
+async function reassignTicket(
+  ticketId: number,
+  technicianId: string
+): Promise<void> {
+  if (!isAdmin()) {
+    notify('Solo un administrador puede reasignar tickets.', 'error');
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from('tickets')
+    .update({ technician_id: technicianId })
+    .eq('id', ticketId)
+    .select('id');
+
+  if (error) {
+    notify(
+      friendlyError(error, 'No se pudo reasignar el ticket.'),
+      'error'
+    );
+    return;
+  }
+
+  if (!data?.length) {
+    notify(
+      'No se pudo reasignar el ticket. Verifica el rol de administrador y la política RLS.',
+      'error'
+    );
+    return;
+  }
+
+  notify('Ticket reasignado correctamente.');
+  await loadTickets();
+}
+
+async function updateTicketStatus(
+  ticketId: number,
+  newStatus: TicketStatus
+): Promise<void> {
+  if (!isStaff()) {
+    notify('No tiene permisos para modificar estados.', 'error');
+    return;
+  }
+
+  const ticket = ticketsCache.find(item => item.id === ticketId);
+
+  if (!isAdmin() && ticket?.technician_id !== currentUser?.id) {
+    notify(
+      'Solo el técnico asignado puede modificar el estado de este ticket.',
+      'error'
+    );
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from('tickets')
+    .update({ status: newStatus })
+    .eq('id', ticketId)
+    .select('id');
+
+  if (error) {
+    notify(
+      friendlyError(error, 'No se pudo actualizar el ticket.'),
+      'error'
+    );
+    return;
+  }
+
+  if (!data?.length) {
+    notify(
+      'La base de datos no permitió el cambio (RLS). Verifique su rol.',
+      'error'
+    );
+    return;
+  }
+
   notify('Estado actualizado.');
   await loadTickets();
 }
 
 async function loadAudit(): Promise<void> {
   const listEl = el<HTMLElement>('auditList');
+
   const { data, error } = await supabase
     .from('audit_logs')
     .select('id, ticket_id, action, old_status, new_status, created_at, actor:profiles!audit_logs_actor_id_fkey(full_name)')
     .order('created_at', { ascending: false })
     .limit(20);
-  if (error) { listEl.replaceChildren(makeEmpty(friendlyError(error, 'No se pudo cargar la auditoría.'))); return; }
-  const logs = (data ?? []) as unknown as AuditLog[];
-  if (!logs.length) { listEl.replaceChildren(makeEmpty('Sin cambios registrados todavía.')); return; }
-  listEl.replaceChildren(...logs.map(log => {
-    const row = document.createElement('div'); row.className = 'audit-row';
-    const what = log.action === 'CREATE'
-    ? `creó el ticket · estado inicial: ${log.new_status ?? 'abierto'}`
-    : log.action === 'ASSIGN'
-      ? 'asignó técnico'
-      : `${log.old_status ?? '-'} → ${log.new_status ?? '-'}`;
 
-    row.textContent = `#${log.ticket_id} · ${what} · ${log.actor?.full_name ?? 'sistema'} · ${new Date(log.created_at).toLocaleString('es-HN')}`;
+  if (error) {
+    listEl.replaceChildren(
+      makeEmpty(friendlyError(error, 'No se pudo cargar la auditoría.'))
+    );
+    return;
+  }
+
+  const logs = (data ?? []) as unknown as AuditLog[];
+
+  if (!logs.length) {
+    listEl.replaceChildren(makeEmpty('Sin cambios registrados todavía.'));
+    return;
+  }
+
+  listEl.replaceChildren(...logs.map(log => {
+    const row = document.createElement('div');
+    row.className = 'audit-row';
+
+    const what = log.action === 'CREATE'
+      ? `creó el ticket · estado inicial: ${log.new_status ?? 'abierto'}`
+      : log.action === 'ASSIGN'
+        ? 'asignó técnico'
+        : `${log.old_status ?? '-'} → ${log.new_status ?? '-'}`;
+
+    row.textContent =
+      `#${log.ticket_id} · ${what} · ${log.actor?.full_name ?? 'sistema'} · ${new Date(log.created_at).toLocaleString('es-HN')}`;
+
     return row;
   }));
 }
@@ -296,13 +908,15 @@ async function loadAudit(): Promise<void> {
 let enteredUserId: string | null = null;
 
 async function enterApp(user: User): Promise<void> {
-  // Evita cargar dos veces (Supabase emite SIGNED_IN también al refrescar la sesión o cambiar de pestaña).
   if (enteredUserId === user.id) return;
+
   enteredUserId = user.id;
   currentUser = user;
+
   try {
     await loadProfile();
-    authView.classList.add('hidden'); appView.classList.remove('hidden');
+    authView.classList.add('hidden');
+    appView.classList.remove('hidden');
     await loadTickets();
   } catch (error) {
     enteredUserId = null;
@@ -312,24 +926,41 @@ async function enterApp(user: User): Promise<void> {
 }
 
 function leaveApp(): void {
-  enteredUserId = null; currentUser = null; currentProfile = null; ticketsCache = [];
-  appView.classList.add('hidden'); authView.classList.remove('hidden');
+  enteredUserId = null;
+  currentUser = null;
+  currentProfile = null;
+  ticketsCache = [];
+  techniciansCache = [];
+  allUsersCache = [];
+  appView.classList.add('hidden');
+  authView.classList.remove('hidden');
+  
+  const navAdminUsers = document.getElementById('navAdminUsers');
+  if (navAdminUsers) {
+    navAdminUsers.classList.add('hidden');
+  }
+
+  const userAdminPanel = document.getElementById('adminUsersPanel');
+  if (userAdminPanel) {
+    userAdminPanel.classList.add('hidden');
+  }
 }
 
 function init(): void {
   setupForms();
+
   if (configError) {
     el<HTMLElement>('configError').textContent = configError;
     el<HTMLElement>('configError').classList.remove('hidden');
     return;
   }
-  // INITIAL_SESSION cubre la sesión guardada; SIGNED_IN cubre login y registro con sesión.
-  // supabase-js recomienda no hacer await dentro de este callback: se difiere con setTimeout.
+
   supabase.auth.onAuthStateChange((event, session) => {
     if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN') && session?.user) {
       const user = session.user;
       window.setTimeout(() => void enterApp(user), 0);
     }
+
     if (event === 'SIGNED_OUT') leaveApp();
   });
 }
