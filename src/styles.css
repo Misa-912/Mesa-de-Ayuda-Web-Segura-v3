@@ -1798,3 +1798,22 @@ button {
     transition-duration: 0.01ms !important;
   }
 }
+/* ==========================================
+   AMPLIAR COLUMNA EN GESTIÓN DE USUARIOS Y ROLES
+   ========================================== */
+
+/* Hace que los selects de la tabla de usuarios se estiren al 100% de su celda/contenedor */
+.users-table select,
+.users-list select,
+div[class*="user"] select,
+table select {
+  width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* En caso de que la celda o contenedor de "Cambiar Rol" tenga un ancho fijo o flex restringido */
+.users-table td:nth-child(3),
+.users-list > div > div:nth-child(3) {
+  width: 100% !important;
+}
