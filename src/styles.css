@@ -954,6 +954,70 @@ input:focus, select:focus, textarea:focus {
   font-weight: 700;
 }
 
+.staff-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(148, 163, 184, .12);
+}
+
+.staff-actions select {
+  max-width: 260px;
+}
+
+.staff-actions .btn {
+  min-height: 40px;
+  padding: 0 18px;
+}
+
+.ticket-action-controls {
+  display: flex;
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.status-actions,
+.reassign-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 10px;
+  min-width: 0;
+}
+
+.reassign-actions {
+  padding-left: 14px;
+  border-left: 1px solid rgba(148, 163, 184, .2);
+}
+
+.reassign-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: .76rem;
+  font-weight: 700;
+}
+
+.reassign-actions select {
+  min-width: 190px;
+  max-width: 260px;
+}
+
+.reassign-hint {
+  color: var(--text-muted);
+  font-size: .8rem;
+}
+
+.btn-reassign {
+  border-color: rgba(6, 182, 212, .32);
+}
+
 #auditPanel {
   width: 100% !important;
   max-width: none !important;
@@ -983,163 +1047,6 @@ input:focus, select:focus, textarea:focus {
   box-sizing: border-box !important;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: .01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: .01ms !important;
-  }
-}
-
-/* ========================================== */
-/*  BOTÓN DE IMPRESIÓN (ESTILO UNIFICADO AZUL) */
-/* ========================================== */
-
-.btn-print-pdf {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 40px;
-  padding: 8px 18px;
-  border: 1px solid rgba(59, 130, 246, 0.4);
-  border-radius: var(--radius-sm);
-  color: #ffffff;
-  background: linear-gradient(115deg, #0891B2, #2563EB);
-  font-size: 0.85rem;
-  font-weight: 750;
-  cursor: pointer;
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);
-  transition: transform var(--transition-fast), filter var(--transition-fast), box-shadow var(--transition-fast);
-}
-
-.btn-print-pdf:hover {
-  filter: brightness(1.12);
-  transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.38);
-}
-
-.btn-print-pdf:active {
-  transform: translateY(0) scale(0.985);
-}
-
-
-/* ==========================================
-   ACCIONES DE TICKET: DISTRIBUCIÓN ORDENADA
-   Mejora visual para estado, reasignación e impresión
-   ========================================== */
-.staff-actions {
-  display: grid !important;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: stretch;
-  gap: 14px;
-  min-width: 0;
-  margin-top: 12px;
-  padding-top: 16px;
-}
-
-.staff-actions > .ticket-action-controls {
-  min-width: 0;
-  width: 100%;
-  grid-column: 1 / -1;
-}
-
-.ticket-action-controls {
-  display: grid !important;
-  flex: initial !important;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: stretch;
-  gap: 16px;
-  min-width: 0;
-  width: 100%;
-}
-
-.status-actions,
-.reassign-actions {
-  min-width: 0;
-  width: 100%;
-  margin: 0;
-  border: 1px solid rgba(148, 163, 184, 0.16);
-  border-radius: 12px;
-  background: rgba(15, 23, 42, 0.42);
-  box-sizing: border-box;
-}
-
-.status-actions {
-  display: grid !important;
-  grid-template-columns: 1fr auto;
-  align-items: center;
-  gap: 10px;
-  padding: 12px;
-}
-
-.status-actions select {
-  width: 100% !important;
-  min-width: 0;
-  max-width: none !important;
-  box-sizing: border-box;
-}
-
-.status-actions .btn {
-  min-height: 44px;
-  padding-inline: 20px;
-  white-space: nowrap;
-}
-
-.reassign-actions {
-  display: grid !important;
-  grid-template-columns: 1fr auto;
-  align-items: end;
-  gap: 8px 10px;
-  padding: 12px;
-}
-
-.reassign-label {
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: stretch;
-  justify-content: flex-end;
-  gap: 7px;
-  width: 100%;
-  min-width: 0;
-  color: var(--text-muted);
-  font-size: 0.76rem;
-  font-weight: 700;
-  line-height: 1.3;
-}
-
-.reassign-actions select {
-  display: block;
-  width: 100% !important;
-  min-width: 0;
-  max-width: none !important;
-  box-sizing: border-box;
-}
-
-.reassign-actions .btn-reassign {
-  grid-column: 2;
-  grid-row: 1;
-  align-self: end;
-  min-height: 44px;
-  padding-inline: 20px;
-  white-space: nowrap;
-}
-
-.reassign-hint {
-  grid-column: 1 / -1;
-  color: var(--text-muted);
-  font-size: 0.8rem;
-  line-height: 1.4;
-}
-
-.staff-actions > .btn-print-pdf {
-  justify-self: end;
-  align-self: center;
-  min-width: 124px;
-  white-space: nowrap;
-}
-
-/* Tablet: apila las secciones para evitar que los controles se compriman. */
 @media (max-width: 980px) {
   #ticketForm {
     grid-template-columns: 1fr;
@@ -1153,22 +1060,8 @@ input:focus, select:focus, textarea:focus {
   .stats-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-
-  .staff-actions {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 12px;
-  }
-
-  .ticket-action-controls {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .staff-actions > .btn-print-pdf {
-    justify-self: end;
-  }
 }
 
-/* Móvil: controles a ancho completo y botones fáciles de pulsar. */
 @media (max-width: 760px) {
   .app-layout {
     flex-direction: column;
@@ -1211,609 +1104,72 @@ input:focus, select:focus, textarea:focus {
     width: 100%;
   }
 
+  .staff-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .staff-actions select,
+  .reassign-actions select {
+    max-width: none;
+    width: 100%;
+  }
+
+  .ticket-action-controls,
   .status-actions,
   .reassign-actions {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 9px;
-    padding: 12px;
-  }
-
-  .status-actions select,
-  .status-actions .btn,
-  .reassign-actions select,
-  .reassign-actions .btn-reassign {
     width: 100%;
-    max-width: none;
-  }
-
-  .reassign-actions .btn-reassign {
-    grid-column: 1;
-    grid-row: auto;
-  }
-
-  .staff-actions > .btn-print-pdf {
-    width: 100%;
-    justify-self: stretch;
-  }
-}
-
-/* =========================================================
-   RESPONSIVE FIX — MESA DE AYUDA
-   Optimización para móviles y tablets
-   No modifica TypeScript ni la lógica de Supabase
-   ========================================================= */
-
-/* Evitar desbordamientos horizontales */
-html,
-body {
-  width: 100%;
-  max-width: 100%;
-  overflow-x: clip;
-}
-
-body,
-.shell,
-.app-layout,
-.dashboard-main,
-.panel,
-.ticket,
-.auth-layout,
-.auth-card {
-  min-width: 0;
-}
-
-/* Imágenes, textos y controles */
-img,
-svg,
-video {
-  max-width: 100%;
-}
-
-input,
-select,
-textarea,
-button {
-  max-width: 100%;
-}
-
-.ticket h3,
-.ticket > p,
-.audit-row,
-.panel-heading,
-.topbar-heading,
-.user-meta {
-  overflow-wrap: anywhere;
-}
-
-/* Tablets y pantallas medianas */
-@media (max-width: 980px) {
-  .auth-layout {
-    grid-template-columns: minmax(0, 1fr);
-    width: min(680px, calc(100% - 32px));
-    gap: 28px;
-    padding: 32px 0;
-  }
-
-  .hero-panel {
-    padding: 28px;
-  }
-
-  .hero-panel h1 {
-    font-size: clamp(2rem, 6vw, 3.5rem);
-  }
-
-  .auth-card {
-    max-width: 100%;
-  }
-
-  .topbar {
-    align-items: flex-start;
-    flex-wrap: wrap;
-  }
-
-  .user-card {
-    min-width: 0;
-    max-width: 100%;
-  }
-
-  .stats-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  #ticketForm {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  #ticketForm > label:nth-of-type(1),
-  #ticketForm > label:nth-of-type(2),
-  #ticketForm > .two-columns,
-  #ticketForm > .btn.primary {
-    grid-column: 1 / -1;
-  }
-
-  #ticketForm > .two-columns {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .staff-actions {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .ticket-action-controls {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-/* Móviles */
-@media (max-width: 760px) {
-  html {
-    scroll-padding-top: 12px;
-  }
-
-  .app-layout {
-    display: flex;
-    flex-direction: column;
-  }
-
-  /* Menú superior adaptable */
-  .sidebar {
-    position: relative !important;
-    top: auto !important;
-    left: auto !important;
-    width: 100% !important;
-    height: auto !important;
-    max-height: none !important;
-    padding: 12px !important;
-    overflow: visible !important;
-    border-right: 0 !important;
-    border-bottom: 1px solid var(--border-color) !important;
-  }
-
-  .side-brand {
-    min-height: 0;
-    padding: 4px 5px 12px;
-  }
-
-  .side-brand-copy strong {
-    font-size: 0.9rem;
-  }
-
-  .side-nav {
-    display: flex;
-    flex-direction: row;
-    gap: 8px;
-    padding-top: 10px;
-    overflow-x: auto;
-    overflow-y: hidden;
-    scrollbar-width: thin;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .nav-item {
-    flex: 0 0 auto;
-    width: auto;
-    min-height: 42px;
-    padding: 10px 12px;
-    white-space: nowrap;
-    font-size: 0.8rem;
-  }
-
-  .sidebar-bottom,
-  .support-note {
-    display: none !important;
-  }
-
-  /* Área principal */
-  .dashboard-main {
-    width: 100% !important;
-    margin-left: 0 !important;
-    padding: 20px 12px 32px !important;
-  }
-
-  .topbar {
-    display: flex;
-    flex-direction: column;
     align-items: stretch;
-    gap: 16px;
-    margin-bottom: 20px;
   }
 
-  .topbar-heading h1 {
-    font-size: clamp(1.65rem, 7vw, 2.1rem);
-    overflow-wrap: anywhere;
-  }
-
-  .topbar-subtitle {
-    font-size: 0.86rem;
-  }
-
-  .user-card {
-    width: 100%;
-    padding: 10px 12px;
-  }
-
-  .user-meta strong {
-    max-width: 100%;
-  }
-
-  /* Estadísticas */
-  .stats-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-    margin-bottom: 20px;
-  }
-
-  .stat-card {
-    min-height: 105px;
-    gap: 10px;
-    padding: 13px;
-  }
-
-  .stat-icon {
-    width: 35px;
-    height: 35px;
-    flex-basis: 35px;
-    font-size: 1.05rem;
-    border-radius: 11px;
-  }
-
-  .stat-label {
-    font-size: 0.63rem;
-    letter-spacing: 0.04em;
-    overflow-wrap: anywhere;
-  }
-
-  .stat-copy > strong {
-    font-size: 1.65rem;
-  }
-
-  /* Paneles y encabezados */
-  .content-grid {
-    gap: 18px;
-  }
-
-  .panel {
-    border-radius: 14px;
-  }
-
-  .panel-heading {
-    align-items: flex-start;
-    gap: 10px;
-    padding: 16px 14px;
-  }
-
-  .panel-icon {
-    width: 36px;
-    height: 36px;
-    flex-basis: 36px;
-    font-size: 1.05rem;
-  }
-
-  .panel-heading h2 {
-    font-size: 1rem;
-    overflow-wrap: anywhere;
-  }
-
-  .panel-heading p:not(.eyebrow) {
-    font-size: 0.78rem;
-  }
-
-  /* Formulario de creación */
-  .create-panel > .form-stack {
-    padding: 15px;
-  }
-
-  #ticketForm {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: 15px;
-  }
-
-  #ticketForm > label:nth-of-type(1),
-  #ticketForm > label:nth-of-type(2),
-  #ticketForm > .two-columns,
-  #ticketForm > .btn.primary {
-    grid-column: 1 / -1;
-  }
-
-  #ticketForm > .two-columns {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: 15px;
-  }
-
-  #ticketForm > .btn.primary {
-    width: 100%;
-    min-width: 0;
-    justify-self: stretch;
-  }
-
-  input,
-  select {
-    min-height: 46px;
-    font-size: 16px;
-  }
-
-  textarea {
-    min-height: 120px;
-    font-size: 16px;
-  }
-
-  /* Filtros de tickets */
-  .tickets-heading {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .filters {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
-    width: 100%;
-    margin-left: 0;
-  }
-
-  .filters select {
-    width: 100%;
-    min-width: 0;
-  }
-
-  .ticket-list {
-    gap: 12px;
-    padding: 12px;
-  }
-
-  .ticket {
-    gap: 10px;
-    padding: 14px;
-    border-radius: 13px;
-  }
-
-  .ticket-top {
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .ticket h3 {
-    font-size: 1rem;
-    line-height: 1.45;
-  }
-
-  .ticket > p {
-    font-size: 0.85rem;
-    overflow-wrap: anywhere;
-  }
-
-  .ticket-meta {
-    align-items: flex-start;
-    gap: 7px;
-  }
-
-  .badge {
-    max-width: 100%;
-    white-space: normal;
-    overflow-wrap: anywhere;
-  }
-
-  /* Estado, reasignación e impresión */
-  .staff-actions {
-    display: grid !important;
-    grid-template-columns: minmax(0, 1fr);
-    align-items: stretch;
-    gap: 12px;
+  .reassign-actions {
+    padding-left: 0;
     padding-top: 12px;
-  }
-
-  .ticket-action-controls {
-    display: grid !important;
-    grid-template-columns: minmax(0, 1fr);
-    gap: 12px;
-    width: 100%;
-  }
-
-  .status-actions,
-  .reassign-actions {
-    display: grid !important;
-    grid-template-columns: minmax(0, 1fr);
-    gap: 10px;
-    width: 100%;
-    padding: 12px;
-    border: 1px solid rgba(148, 163, 184, 0.16);
-    border-radius: 12px;
-  }
-
-  .status-actions select,
-  .status-actions .btn,
-  .reassign-actions select,
-  .reassign-actions .btn-reassign,
-  .staff-actions > .btn-print-pdf {
-    width: 100%;
-    min-width: 0;
-    max-width: none;
-    min-height: 44px;
-    grid-column: 1;
-    grid-row: auto;
-    justify-self: stretch;
-    white-space: normal;
-  }
-
-  .reassign-actions .btn-reassign {
-    align-self: stretch;
+    border-left: 0;
+    border-top: 1px solid rgba(148, 163, 184, .2);
   }
 
   .reassign-label {
     width: 100%;
-    min-width: 0;
-  }
-
-  .reassign-hint {
-    grid-column: 1;
-  }
-
-  .staff-actions > .btn-print-pdf {
-    display: inline-flex;
-  }
-
-  /* Auditoría */
-  #auditPanel {
-    width: 100% !important;
-    margin-top: 20px !important;
-  }
-
-  .audit-list {
-    gap: 9px;
-    padding: 12px !important;
-  }
-
-  .audit-row {
-    padding: 12px !important;
-    font-size: 0.82rem !important;
-    overflow-wrap: anywhere;
-  }
-
-  /* Notificaciones */
-  .toast {
-    top: 10px;
-    right: 10px;
-    left: 10px;
-    width: auto;
-    max-width: none;
-    padding: 12px 14px;
-  }
-
-  /* Login y registro */
-  .auth-layout {
-    width: calc(100% - 24px);
-    min-height: 100svh;
-    grid-template-columns: minmax(0, 1fr);
-    gap: 18px;
-    padding: 20px 0;
-  }
-
-  .hero-panel {
-    padding: 22px 18px;
-    border-radius: 17px;
-  }
-
-  .hero-panel h1 {
-    margin: 14px 0;
-    font-size: clamp(2rem, 10vw, 3rem);
-    line-height: 1.05;
-  }
-
-  .hero-panel > p {
-    font-size: 0.92rem;
-    line-height: 1.65;
-  }
-
-  .feature-grid {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 9px;
-    margin-top: 22px;
-  }
-
-  .feature-grid > div {
-    min-height: 0;
-    padding: 12px 14px;
-  }
-
-  .auth-card {
-    width: 100%;
-    max-width: none;
-    padding: 22px 18px;
-    border-radius: 17px;
-  }
-
-  .auth-card h2 {
-    font-size: 1.55rem;
-  }
-
-  .muted {
-    margin-bottom: 18px;
-  }
-
-  .form-stack {
-    gap: 15px;
-  }
-
-  .btn {
-    min-height: 44px;
-    white-space: normal;
   }
 }
 
-/* Teléfonos muy estrechos */
-@media (max-width: 380px) {
-  .dashboard-main {
-    padding-right: 9px !important;
-    padding-left: 9px !important;
-  }
-
-  .stats-grid {
-    gap: 8px;
-  }
-
-  .stat-card {
-    flex-direction: column;
-    gap: 8px;
-    padding: 11px;
-  }
-
-  .stat-copy > strong {
-    font-size: 1.5rem;
-  }
-
-  .panel-heading {
-    padding: 13px 11px;
-  }
-
-  .create-panel > .form-stack,
-  .ticket-list {
-    padding: 10px;
-  }
-
-  .ticket {
-    padding: 12px;
-  }
-
-  .side-brand-copy strong {
-    font-size: 0.82rem;
-  }
-
-  .nav-item {
-    padding: 9px 10px;
-    font-size: 0.76rem;
-  }
-}
-
-/* Accesibilidad: respetar la preferencia de movimiento reducido */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    scroll-behavior: auto !important;
-    animation-duration: 0.01ms !important;
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
     animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+    transition-duration: .01ms !important;
   }
 }
-/* ==========================================
-   AMPLIAR COLUMNA EN GESTIÓN DE USUARIOS Y ROLES
-   ========================================== */
 
-/* Hace que los selects de la tabla de usuarios se estiren al 100% de su celda/contenedor */
-.users-table select,
-.users-list select,
-div[class*="user"] select,
-table select {
-  width: 100% !important;
-  min-width: 0 !important;
-  box-sizing: border-box !important;
+/* ========================================== */
+/*  BOTÓN DE IMPRESIÓN (ESTILO UNIFICADO AZUL) */
+/* ========================================== */
+
+.btn-print-pdf {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px 18px;
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  border-radius: var(--radius-sm);
+  color: #ffffff;
+  background: linear-gradient(115deg, #0891B2, #2563EB);
+  font-size: 0.85rem;
+  font-weight: 750;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);
+  transition: transform var(--transition-fast), filter var(--transition-fast), box-shadow var(--transition-fast);
 }
 
-/* En caso de que la celda o contenedor de "Cambiar Rol" tenga un ancho fijo o flex restringido */
-.users-table td:nth-child(3),
-.users-list > div > div:nth-child(3) {
-  width: 100% !important;
+.btn-print-pdf:hover {
+  filter: brightness(1.12);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.38);
+}
+
+.btn-print-pdf:active {
+  transform: translateY(0) scale(0.985);
 }
