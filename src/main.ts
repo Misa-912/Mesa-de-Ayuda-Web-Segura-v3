@@ -124,30 +124,38 @@ const dashboardNavLinks = Array.from(
   )
 );
 
-function syncActiveNav(): void {
+// Sistema de enrutamiento por pestañas (separa la vista de tickets y la vista de usuarios)
+function handleViewRouting(): void {
   const targetId = window.location.hash || '#dashboardTop';
-  const activeLink = dashboardNavLinks.find(
-    (link) => link.getAttribute('href') === targetId
-  ) ?? dashboardNavLinks.find(
-    (link) => link.getAttribute('href') === '#dashboardTop'
-  );
-
+  
   dashboardNavLinks.forEach((link) => {
-    link.classList.toggle('active', link === activeLink);
+    link.classList.toggle('active', link.getAttribute('href') === targetId);
   });
+
+  const isUsersView = targetId === '#adminUsersPanel' || targetId === '#adminUsersSection';
+  
+  // Oculta o muestra los elementos principales del dashboard de tickets
+  const ticketPanels = document.querySelectorAll<HTMLElement>('.stats-grid, .content-grid');
+  ticketPanels.forEach(panel => {
+    panel.style.display = isUsersView ? 'none' : '';
+  });
+
+  // Muestra u oculta el panel de administración de usuarios de forma independiente
+  const userAdminPanel = document.getElementById('adminUsersPanel') || document.getElementById('adminUsersSection');
+  if (userAdminPanel) {
+    userAdminPanel.classList.toggle('hidden', !isUsersView);
+    // Asegurar que ocupe el espacio principal si está activo
+    userAdminPanel.style.display = isUsersView ? 'block' : 'none';
+  }
 }
+
+window.addEventListener('hashchange', handleViewRouting);
 
 dashboardNavLinks.forEach((link) => {
   link.addEventListener('click', () => {
-    dashboardNavLinks.forEach((item) => {
-      item.classList.remove('active');
-    });
-    link.classList.add('active');
+    window.setTimeout(handleViewRouting, 10);
   });
 });
-
-window.addEventListener('hashchange', syncActiveNav);
-syncActiveNav();
 
 el<HTMLFormElement>('ticketForm').addEventListener('submit', (event) => {
   event.preventDefault();
@@ -225,10 +233,13 @@ async function loadProfile(): Promise<void> {
     navAdminUsers.classList.toggle('hidden', !isAdmin());
   }
 
-  const userAdminPanel = document.getElementById('adminUsersPanel');
+  const userAdminPanel = document.getElementById('adminUsersPanel') || document.getElementById('adminUsersSection');
   if (userAdminPanel) {
-    userAdminPanel.classList.toggle('hidden', !isAdmin());
+    userAdminPanel.classList.add('hidden');
+    userAdminPanel.style.display = 'none';
   }
+
+  handleViewRouting();
 }
 
 function isStaff(): boolean {
@@ -306,7 +317,6 @@ function renderAdminUsersPanel(): void {
     const tdAction = document.createElement('td');
     tdAction.style.padding = '12px 10px';
 
-    // Contenedor flex para alinear horizontalmente el selector y el botón
     const actionContainer = document.createElement('div');
     actionContainer.style.display = 'flex';
     actionContainer.style.alignItems = 'center';
@@ -940,7 +950,7 @@ function leaveApp(): void {
     navAdminUsers.classList.add('hidden');
   }
 
-  const userAdminPanel = document.getElementById('adminUsersPanel');
+  const userAdminPanel = document.getElementById('adminUsersPanel') || document.getElementById('adminUsersSection');
   if (userAdminPanel) {
     userAdminPanel.classList.add('hidden');
   }
